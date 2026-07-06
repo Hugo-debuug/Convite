@@ -141,5 +141,56 @@ if (adminForm) {
         }
     });
 }
+// --- MODO SECRETO (EASTER EGG) ---
+let clickCount = 0;
+let clickTimer;
+
+// Escuta os cliques em qualquer lugar da tela
+document.addEventListener('click', () => {
+    clickCount++;
+    
+    // Inicia o tempo no primeiro clique
+    if (clickCount === 1) {
+        clickTimer = setTimeout(() => {
+            clickCount = 0; // Zera se demorar mais de 2 segundos
+        }, 2000); 
+    }
+
+    // Se chegar a 7 cliques rápidos
+    if (clickCount === 7) {
+        clearTimeout(clickTimer);
+        clickCount = 0;
+        triggerSecretWipe();
+    }
+});
+
+async function triggerSecretWipe() {
+    // Abre a caixinha nativa do navegador
+    const command = prompt("Modo Teste: Digite o comando secreto para continuar:");
+    
+    if (command === 'wipe') {
+        const confirmWipe = confirm("Tem certeza? Isso vai apagar todas as respostas!");
+        
+        if (confirmWipe) {
+            try {
+                // Chama a rota secreta no backend
+                const response = await fetch('/api/admin/wipe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: 'gise18' }) // Usando a senha do sistema por segurança
+                });
+
+                if (response.ok) {
+                    alert("Banco de dados apagado com sucesso! Recarregando a página...");
+                    location.reload(); // Atualiza a página
+                } else {
+                    alert("Erro ao apagar o banco de dados.");
+                }
+            } catch (error) {
+                alert("Erro de conexão.");
+            }
+        }
+    }
+}
 
 loadSummary();
