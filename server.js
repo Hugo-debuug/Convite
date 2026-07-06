@@ -124,6 +124,38 @@ const server = http.createServer((req, res) => {
         sendJson(res, 200, readConfirmations());
         return;
     }
+    // --- ROTA SECRETA PARA LIMPAR DADOS ---
+    if (req.method === 'POST' && url.pathname === '/api/admin/wipe') {
+        let body = '';
+
+        req.on('data', (chunk) => {
+            body += chunk;
+        });
+
+        req.on('end', () => {
+            try {
+                const payload = JSON.parse(body || '{}');
+
+                // Verifica a senha para ninguém apagar seu banco de sacanagem
+                if (payload.password !== adminPassword) {
+                    sendJson(res, 401, { error: 'Acesso negado.' });
+                    return;
+                }
+
+                // Limpa o banco de dados local sobrescrevendo com uma lista vazia
+                writeConfirmations([]);
+                
+                // Nota: Se você for usar o Supabase no Vercel depois, 
+                // você precisará adicionar o código para deletar os dados no Supabase aqui também!
+
+                sendJson(res, 200, { ok: true, message: 'Banco de dados limpo.' });
+            } catch {
+                sendJson(res, 400, { error: 'Dados inválidos.' });
+            }
+        });
+
+        return;
+    }
 
     if (req.method === 'POST' && url.pathname === '/api/confirm') {
         let body = '';
