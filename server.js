@@ -21,13 +21,18 @@ const MIME_TYPES = {
     '.jpeg': 'image/jpeg',
     '.svg': 'image/svg+xml',
 };
-
 // 1. Função para LER os dados do Firebase
 async function readConfirmations() {
     try {
         const response = await fetch(FIREBASE_URL);
         const data = await response.json();
         
+        // Se o Firebase retornar um erro (ex: Permission denied), avisamos no console e retornamos vazio
+        if (!response.ok) {
+            console.error('Erro de permissão no Firebase:', data);
+            return [];
+        }
+
         if (!data) return []; // Se for null (vazio), retorna lista vazia
 
         // O Firebase salva os itens soltos. Isso junta tudo numa lista normal.
