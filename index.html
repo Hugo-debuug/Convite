@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>18 anos da minha princesa</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <div class="background-glow"></div>
+
+  <header class="hero">
+    <h1>Giselli</h1>
+    <p class="hero-date">19/09</p>
+    <p class="hero-text">
+      Venha celebrar uma noite especial com muita música, carinho e emoção.
+    </p>
+
+    <a href="#rsvp" class="btn">Confirmar presença</a>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Uma noite cheia de estilo</h2>
+      <p>
+        Vamos fazer desse aniversário algo inesquecível, com uma atmosfera
+        romantica, elegante e cheia de boas lembranças.
+      </p>
+      <div class="info-grid">
+        <div>
+          <strong>Data</strong>
+          <span>15 de agosto</span>
+        </div>
+        <div>
+          <strong>Horário</strong>
+          <span>19h30</span>
+        </div>
+        <div>
+          <strong>Local</strong>
+          <span>Endereço a confirmar</span>
+        </div>
+        <div>
+          <strong>Estilo</strong>
+          <span>Elegante e descontraído</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="rsvp">
+      <h2>Confirme sua presença</h2>
+      <form id="rsvp-form">
+        <label>
+          Seu nome
+          <input type="text" name="name" placeholder="Digite seu nome" required />
+        </label>
+
+        <label>
+          E-mail
+          <input type="email" name="email" placeholder="seu@email.com" />
+        </label>
+
+        <label>
+          Você vai comparecer?
+          <select name="attendance">
+            <option value="Sim">Sim, vou estar lá</option>
+            <option value="Talvez">Talvez</option>
+            <option value="Não">Não posso</option>
+          </select>
+        </label>
+
+        <label>
+          Quantas pessoas?
+          <input type="number" name="guests" min="1" max="5" value="1" />
+        </label>
+
+        <label>
+          Mensagem para a aniversariante
+          <textarea name="message" rows="4" placeholder="Escreva uma mensagem especial"></textarea>
+        </label>
+
+        <button type="submit" class="btn">Confirmar</button>
+      </form>
+      <p id="form-status" class="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>Resumo das respostas</h2>
+      <div id="summary-cards" class="summary-grid"></div>
+      <p class="private-note">
+        Os nomes completos ficam apenas na área privada da aniversariante.
+      </p>
+      <a href="/admin.html" class="admin-link">Ver área privada</a>
+    </section>
+  </main>
+
+  <script src="/script.js"></script>
+</body>
+
+</html>
