@@ -141,22 +141,15 @@ if (adminForm) {
         }
     });
 }
-// --- MODO SECRETO (EASTER EGG) ---
+// --- MODO SECRETO (EASTER EGG) BLINDADO ---
 let clickCount = 0;
 let clickTimer;
 
-// Escuta os cliques em qualquer lugar da tela
 document.addEventListener('click', () => {
     clickCount++;
-    
-    // Inicia o tempo no primeiro clique
     if (clickCount === 1) {
-        clickTimer = setTimeout(() => {
-            clickCount = 0; // Zera se demorar mais de 2 segundos
-        }, 2000); 
+        clickTimer = setTimeout(() => clickCount = 0, 2000); 
     }
-
-    // Se chegar a 7 cliques rápidos
     if (clickCount === 7) {
         clearTimeout(clickTimer);
         clickCount = 0;
@@ -165,32 +158,32 @@ document.addEventListener('click', () => {
 });
 
 async function triggerSecretWipe() {
-    // Abre a caixinha nativa do navegador
-    const command = prompt("Modo Teste: Digite o comando secreto para continuar:");
+    // Agora pedimos a SENHA diretamente, e não a palavra "wipe"
+    const senhaDigitada = prompt("Modo Teste: Digite a senha de administrador para limpar o banco:");
     
-    if (command === 'wipe') {
-        const confirmWipe = confirm("Tem certeza? Isso vai apagar todas as respostas!");
-        
-        if (confirmWipe) {
-            try {
-                // Chama a rota secreta no backend
-                const response = await fetch('/api/admin/wipe', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: 'gise18' }) // Usando a senha do sistema por segurança
-                });
+    // Se a pessoa cancelar ou deixar em branco, não faz nada
+    if (!senhaDigitada) return;
+    
+    const confirmWipe = confirm("Tem certeza? Isso vai apagar todas as respostas!");
+    
+    if (confirmWipe) {
+        try {
+            const response = await fetch('/api/admin/wipe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // Enviamos a senha que a pessoa digitou, e não uma senha fixa no código!
+                body: JSON.stringify({ password: senhaDigitada }) 
+            });
 
-                if (response.ok) {
-                    alert("Banco de dados apagado com sucesso! Recarregando a página...");
-                    location.reload(); // Atualiza a página
-                } else {
-                    alert("Erro ao apagar o banco de dados.");
-                }
-            } catch (error) {
-                alert("Erro de conexão.");
+            if (response.ok) {
+                alert("Banco de dados apagado com sucesso! Recarregando a página...");
+                location.reload(); 
+            } else {
+                alert("Erro: Senha incorreta ou acesso negado.");
             }
+        } catch (error) {
+            alert("Erro de conexão.");
         }
     }
 }
-
 loadSummary();
