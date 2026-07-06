@@ -3,19 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = __dirname;
-const dataDir = path.join(rootDir, 'data');
-const dataFile = path.join(dataDir, 'confirmations.json');
 const adminPassword = process.env.ADMIN_PASSWORD || 'gise18';
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-}
-
-if (!fs.existsSync(dataFile)) {
-    fs.writeFileSync(dataFile, '[]', 'utf8');
-}
+// O SEU LINK DO FIREBASE AQUI! (Nota: o .json no final é obrigatório no Firebase)
+const FIREBASE_URL = 'https://convite-giselli-default-rtdb.firebaseio.com/confirmations.json';
 
 const MIME_TYPES = {
     '.html': 'text/html; charset=utf-8',
@@ -28,18 +19,23 @@ const MIME_TYPES = {
     '.svg': 'image/svg+xml',
 };
 
-function readConfirmations() {
+// 1. Função para LER os dados do Firebase
+async function readConfirmations() {
     try {
-        return JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-    } catch {
+        const response = await fetch(FIREBASE_URL);
+        const data = await response.json();
+        
+        if (!data) return []; // Se for null (vazio), retorna lista vazia
+
+        // O Firebase salva os itens soltos. Isso junta tudo numa lista normal.
+        return Object.values(data);
+    } catch (error) {
+        console.error('Erro ao ler do Firebase:', error);
         return [];
     }
 }
 
-function writeConfirmations(data) {
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2), 'utf8');
-}
-
+// 2. Função para RESUMIR os dados
 function buildSummary(items) {
     return items.reduce(
         (summary, item) => {
@@ -56,26 +52,6 @@ function buildSummary(items) {
         },
         { sim: 0, talvez: 0, nao: 0, total: 0 },
     );
-}
-
-async function syncToSupabase(record) {
-    if (!supabaseUrl || !supabaseKey) {
-        return;
-    }
-
-    try {
-        await fetch(`${supabaseUrl}/rest/v1/confirmations`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                apikey: supabaseKey,
-                Authorization: `Bearer ${supabaseKey}`,
-            },
-            body: JSON.stringify(record),
-        });
-    } catch (error) {
-        console.error('Erro ao sincronizar com Supabase:', error.message);
-    }
 }
 
 function sendJson(res, statusCode, payload) {
@@ -105,65 +81,55 @@ function serveStatic(res, requestedPath) {
     });
 }
 
-const server = http.createServer((req, res) => {
+// O SERVIDOR (Note que adicionei 'async' aqui)
+const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
-    if (req.method === 'GET' && url.pathname === '/api/summary') {
-        sendJson(res, 200, buildSummary(readConfirmations()));
-        return;
-    }
-
-    if (req.method === 'GET' && url.pathname === '/api/admin/confirmations') {
-        const password = url.searchParams.get('password');
-
-        if (password !== adminPassword) {
-            sendJson(res, 401, { error: 'Acesso negado.' });
-            return;
-        }
-
-        sendJson(res, 200, readConfirmations());
-        return;
-    }
-    // --- ROTA SECRETA PARA LIMPAR DADOS ---
+    // --- MODO SECRETO: LIMPAR BANCO DE DADOS ---
     if (req.method === 'POST' && url.pathname === '/api/admin/wipe') {
         let body = '';
-
-        req.on('data', (chunk) => {
-            body += chunk;
-        });
-
-        req.on('end', () => {
+        req.on('data', chunk => body += chunk);
+        req.on('end', async () => {
             try {
                 const payload = JSON.parse(body || '{}');
-
-                // Verifica a senha para ninguém apagar seu banco de sacanagem
                 if (payload.password !== adminPassword) {
                     sendJson(res, 401, { error: 'Acesso negado.' });
                     return;
                 }
-
-                // Limpa o banco de dados local sobrescrevendo com uma lista vazia
-                writeConfirmations([]);
                 
-                // Nota: Se você for usar o Supabase no Vercel depois, 
-                // você precisará adicionar o código para deletar os dados no Supabase aqui também!
-
-                sendJson(res, 200, { ok: true, message: 'Banco de dados limpo.' });
+                // Manda um comando DELETE para o Firebase para apagar tudo
+                await fetch(FIREBASE_URL, { method: 'DELETE' });
+                sendJson(res, 200, { ok: true, message: 'Banco limpo.' });
             } catch {
-                sendJson(res, 400, { error: 'Dados inválidos.' });
+                sendJson(res, 400, { error: 'Erro.' });
             }
         });
-
         return;
     }
 
+    // --- LER RESUMO ---
+    if (req.method === 'GET' && url.pathname === '/api/summary') {
+        const confirmacoes = await readConfirmations();
+        sendJson(res, 200, buildSummary(confirmacoes));
+        return;
+    }
+
+    // --- LER PARA A ÁREA VIP ---
+    if (req.method === 'GET' && url.pathname === '/api/admin/confirmations') {
+        const password = url.searchParams.get('password');
+        if (password !== adminPassword) {
+            sendJson(res, 401, { error: 'Acesso negado.' });
+            return;
+        }
+        const confirmacoes = await readConfirmations();
+        sendJson(res, 200, confirmacoes);
+        return;
+    }
+
+    // --- SALVAR NOVA CONFIRMAÇÃO ---
     if (req.method === 'POST' && url.pathname === '/api/confirm') {
         let body = '';
-
-        req.on('data', (chunk) => {
-            body += chunk;
-        });
-
+        req.on('data', (chunk) => body += chunk);
         req.on('end', async () => {
             try {
                 const payload = JSON.parse(body || '{}');
@@ -185,20 +151,22 @@ const server = http.createServer((req, res) => {
                     createdAt: new Date().toISOString(),
                 };
 
-                const confirmations = readConfirmations();
-                confirmations.push(confirmation);
-                writeConfirmations(confirmations);
-                await syncToSupabase(confirmation);
+                // Enviando para o Firebase (POST)
+                await fetch(FIREBASE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(confirmation)
+                });
 
                 sendJson(res, 201, { ok: true, confirmation });
             } catch {
                 sendJson(res, 400, { error: 'Dados inválidos.' });
             }
         });
-
         return;
     }
 
+    // Serve os arquivos HTML, CSS, JS
     const requestedPath = url.pathname === '/' ? '/index.html' : url.pathname;
     serveStatic(res, requestedPath);
 });
