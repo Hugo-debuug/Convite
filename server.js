@@ -5,8 +5,11 @@ const path = require('path');
 const rootDir = __dirname;
 const adminPassword = process.env.ADMIN_PASSWORD;
 
-// O SEU LINK DO FIREBASE AQUI! (Nota: o .json no final é obrigatório no Firebase)
-const FIREBASE_URL = 'https://convite-giselli-default-rtdb.firebaseio.com/confirmations.json';
+// Pega o segredo do cofre do Render
+const firebaseSecret = process.env.FIREBASE_SECRET;
+
+// Adiciona o segredo no final da URL
+const FIREBASE_URL = `https://convite-giselli-default-rtdb.firebaseio.com/confirmations.json?auth=${firebaseSecret}`;
 
 const MIME_TYPES = {
     '.html': 'text/html; charset=utf-8',
