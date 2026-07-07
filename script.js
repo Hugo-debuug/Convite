@@ -69,6 +69,42 @@ function renderAdminTable(items) {
     adminTable.hidden = false;
 }
 
+// --- FUNÇÃO ADICIONADA: GERADOR DE PLANILHA EXCEL COMPATÍVEL (UTF-8 + POUPANÇA DE ERROS) ---
+function exportarDadosParaCSV(items, nomeDoArquivo) {
+    if (!items || !items.length) {
+        alert("Não há dados para exportar!");
+        return;
+    }
+
+    const csv = [];
+    // Define o cabeçalho das colunas no Excel
+    csv.push("Nome;Presença;Quantidade de Convidados;E-mail;Mensagem");
+
+    // Varre os itens recebidos do servidor e organiza nas linhas correspondentes
+    for (const item of items) {
+        const name = (item.name || '-').replace(/"/g, '""');
+        const attendance = (item.attendance || '-').replace(/"/g, '""');
+        const guests = item.guests || 1;
+        const email = (item.email || '-').replace(/"/g, '""');
+        const message = (item.message || '-').replace(/"/g, '""');
+
+        csv.push(`"${name}";"${attendance}";"${guests}";"${email}";"${message}"`);
+    }
+
+    // Código BOM (\ufeff) garante que o Excel em Português abra com todos os acentos corretos
+    const csvContent = "\ufeff" + csv.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = nomeDoArquivo;
+    link.style.display = "none";
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 if (form) {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -128,6 +164,16 @@ if (adminForm) {
             }
 
             renderAdminTable(data);
+
+            // --- ATIVAÇÃO DO BOTÃO EXCEL QUANDO LOGADO COM SUCESSO ---
+            const btnExportar = document.getElementById("btn-exportar");
+            if (btnExportar) {
+                btnExportar.style.display = "block";
+                btnExportar.onclick = () => {
+                    exportarDadosParaCSV(data, "Lista_de_Convidados_Giselli.csv");
+                };
+            }
+
             if (adminMessage) {
                 adminMessage.textContent = `${data.length} resposta(s) carregada(s).`;
             }
@@ -138,9 +184,15 @@ if (adminForm) {
             if (adminTable) {
                 adminTable.hidden = true;
             }
+            // Esconde o botão do Excel se a senha falhar
+            const btnExportar = document.getElementById("btn-exportar");
+            if (btnExportar) {
+                btnExportar.style.display = "none";
+            }
         }
     });
 }
+
 // --- MODO SECRETO (EASTER EGG) BLINDADO ---
 let clickCount = 0;
 let clickTimer;
@@ -158,10 +210,8 @@ document.addEventListener('click', () => {
 });
 
 async function triggerSecretWipe() {
-    // Agora pedimos a SENHA diretamente, e não a palavra "wipe"
     const senhaDigitada = prompt("Modo Teste: Digite a senha de administrador para limpar o banco:");
     
-    // Se a pessoa cancelar ou deixar em branco, não faz nada
     if (!senhaDigitada) return;
     
     const confirmWipe = confirm("Tem certeza? Isso vai apagar todas as respostas!");
@@ -171,7 +221,6 @@ async function triggerSecretWipe() {
             const response = await fetch('/api/admin/wipe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // Enviamos a senha que a pessoa digitou, e não uma senha fixa no código!
                 body: JSON.stringify({ password: senhaDigitada }) 
             });
 
@@ -186,4 +235,5 @@ async function triggerSecretWipe() {
         }
     }
 }
+
 loadSummary();
